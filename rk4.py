@@ -108,8 +108,8 @@ class RK4:
         # Plot x vs y1
         plt.subplot(1, 2, 1)
         plt.plot(this.x_values, this.y1_values, label='y1(x)', color='b')
-        plt.xlabel('x')
-        plt.ylabel('y1')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Olive oil height in container (m)')
         plt.title('Plot of y1 vs x')
         plt.grid(True)
         plt.legend()
@@ -117,11 +117,15 @@ class RK4:
         # Plot x vs y2
         plt.subplot(1, 2, 2)
         plt.plot(this.x_values, this.y2_values, label='y2(x)', color='r')
-        plt.xlabel('x')
-        plt.ylabel('y2')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Plive oil height in funnel (m)')
         plt.title('Plot of y2 vs x')
         plt.grid(True)
         plt.legend()
 
         plt.tight_layout()
-        plt.show()
+        # plt.show()
+        plt.savefig("funnel0.02.png")
+
+    def getMaxFunnelHeight(this):
+        return max(this.y2_values)

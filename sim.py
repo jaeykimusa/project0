@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, FFMpegWriter
+import matplotlib.animation as animation
 from matplotlib.patches import Rectangle, Polygon
 import matplotlib.patches as mpatches
 
@@ -125,8 +126,105 @@ def main():
                 x_ub=200,
                 h=0.001
             )
+    
+    def animate_funnel(rkrk, d_c, h_c_max, h_f_max, angle_f):
+        # Create figure and axes
+        fig, ax = plt.subplots(figsize=(6, 8))
+        ax.set_xlim(-0.2, 0.2)
+        ax.set_ylim(0, h_c_max + h_f_max + 0.1)
+        ax.set_aspect('equal')
+        ax.set_title("Olive Oil Draining Simulation", fontsize=12)
+        ax.set_xlabel("Width (m)")
+        ax.set_ylabel("Height (m)")
+        
+        # Cylinder geometry
+        cyl_left = -d_c / 2
+        cyl_right = d_c / 2
+        gap = 0.02  
+        cyl_bottom = h_f_max + gap
+        cyl_top = cyl_bottom + h_c_max
+
+        # Funnel geometry
+        funnel_half_width_top = h_f_max / np.tan(angle_f)
+        funnel_bottom_y = 0
+        funnel_top_y = h_f_max
+        funnel_points = [
+            [0, funnel_bottom_y],
+            [-funnel_half_width_top, funnel_top_y],
+            [funnel_half_width_top, funnel_top_y]
+        ]
+
+        # Draw outlines
+        ax.plot([cyl_left, cyl_left, cyl_right, cyl_right, cyl_left],
+                [cyl_bottom, cyl_top, cyl_top, cyl_bottom, cyl_bottom],
+                color='black')
+        funnel_outline = Polygon(funnel_points, fill=False, color='black')
+        ax.add_patch(funnel_outline)
+
+        # Create patches for the oil in the cylinder and funnel
+        oil_cylinder = Rectangle((cyl_left, cyl_bottom), d_c, 0, color='goldenrod', alpha=0.7)
+        oil_funnel = Polygon([[0, 0]], color='goldenrod', alpha=0.7)
+        ax.add_patch(oil_cylinder)
+        ax.add_patch(oil_funnel)
+
+        # Stream between cylinder and funnel
+        stream, = ax.plot([0, 0], [0, 0], color='goldenrod', lw=2, alpha=0.6)
+
+        # Add live text display (time, heights)
+        info_text = ax.text(
+            0.05, h_c_max + h_f_max + 0.05,
+            "", fontsize=10, color='black', va='bottom'
+        )
+
+        def update(frame):
+            # Extract current data
+            h_c = rkrk.y1_values[frame]
+            h_f = rkrk.y2_values[frame]
+            t = rkrk.x_values[frame]
+
+            # Update cylinder oil height
+            oil_cylinder.set_height(h_c)
+            oil_cylinder.set_y(cyl_bottom)
+
+            # Update funnel shape
+            top_width = h_f / np.tan(angle_f)
+            funnel_liquid = np.array([
+                [0, funnel_bottom_y],
+                [-top_width, funnel_bottom_y + h_f],
+                [top_width, funnel_bottom_y + h_f]
+            ])
+            oil_funnel.set_xy(funnel_liquid)
+
+            # Update stream (only when draining)
+            if h_c > 0.001:
+                stream.set_data([0, 0], [funnel_top_y + gap, cyl_bottom])
+            else:
+                stream.set_data([], [])
+
+            # Update live info text
+            info_text.set_text(
+                f"Time: {t:6.2f} s\n"
+                f"h_c (cylinder): {h_c:6.3f} m\n"
+                f"h_f (funnel): {h_f:6.3f} m"
+            )
+
+            return oil_cylinder, oil_funnel, stream, info_text
+
+        ani = animation.FuncAnimation(
+            fig, update, frames=range(0, len(rkrk.x_values), 1000),
+            interval=0.5, blit=False, repeat=False
+        )
+
+        plt.tight_layout()
+        plt.show()
+
+        return ani
+
+
+
     rkrk.solve()
     rkrk.plot()
+    ani = animate_funnel(rkrk, d_c, h_c_max, h_f_max, angle_f)
         # problem = RK4(
         #             [func1, func2], 
         #             y1_0=-np.pi, 
@@ -155,5 +253,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
